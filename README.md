@@ -28,6 +28,16 @@ reordering and load constants from memory, and immediates use only their low 8
 bits. `dv/programs/common.inc` sets this up and provides the pass and fail
 reporting the tests use. `dv/programs/link.ld` is the memory map.
 
+## Results
+
+`make syn` runs LibreLane through synthesis and pre-layout timing at the clock
+target in `pnr/config.yaml`. It prints the cell count and area, then setup and
+hold slack for each timing corner; the full reports are under `pnr/runs/syn/`.
+
+The SRAM block has a timing model only at the typical corner, so only that
+corner checks paths through it. The slow and fast corners check every other
+path, which is why their slack can look better than the chip's.
+
 ## Repository Structure
 
 ```
@@ -36,6 +46,7 @@ mips-cpu/
 ├── dv/               # unit testbenches and the whole-chip testbench
 │   └── programs/     # MIPS test programs, memory map, shared macros
 ├── lint/             # lowRISC lint rules and formatter settings
+├── pnr/              # the LibreLane flow configuration
 └── Makefile
 ```
 
@@ -49,6 +60,8 @@ mips-cpu/
 - The SkyWater 130 PDK at open_pdks `8afc8346`, installed with ciel 3.2.0:
   `ciel enable --pdk-family sky130 8afc8346a57fe1ab7934ba5a6056ea8b43078e71`
 - GNU Make
+- Docker, with LibreLane's image `ghcr.io/librelane/librelane:3.0.16`, for
+  synthesis
 
 `PDK_ROOT` points at the PDK and defaults to `~/.ciel`.
 
@@ -59,6 +72,7 @@ make test                          # every unit test and test program
 make run PROG=dv/programs/alu.s    # one program on the whole chip
 make lint                          # verible with lowRISC's rules, then Verilator
 make format                        # verible with lowRISC's settings
+make syn                           # LibreLane through synthesis and pre-layout timing
 ```
 
 ## Authors

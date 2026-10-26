@@ -1,0 +1,28 @@
+# The LibreLane flow for the whole chip. `make syn` stops after synthesis and
+# pre-layout timing.
+
+DESIGN_NAME: mips_top
+VERILOG_FILES: dir::../rtl/*.sv
+
+# Yosys's own frontend cannot parse package types in port lists; Slang can
+USE_SLANG: true
+
+CLOCK_PORT: clk_i
+# nanoseconds; synthesis, timing, and layout all take the clock target from here
+CLOCK_PERIOD: 20
+
+MACROS:
+  sky130_sram_1kbyte_1rw1r_32x256_8:
+    instances:
+      u_sram: {}
+    gds:
+      - pdk_dir::libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds
+    lef:
+      - pdk_dir::libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef
+    vh:
+      - pdk_dir::libs.ref/sky130_sram_macros/verilog/sky130_sram_1kbyte_1rw1r_32x256_8.v
+    # the block ships timing for the typical corner only, so LibreLane treats it
+    # as a black box at the slow and fast corners
+    lib:
+      "*_tt_025C_1v80":
+        - pdk_dir::libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib

@@ -1,0 +1,2 @@
+# Prettier reads .inc as HTML; these are GNU assembler includes
+*.inc

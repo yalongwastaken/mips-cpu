@@ -5,25 +5,27 @@ MIPS_AS        ?= mips-linux-gnu-as
 MIPS_LD        ?= mips-linux-gnu-ld
 MIPS_OBJCOPY   ?= mips-linux-gnu-objcopy
 PDK_ROOT       ?= $(HOME)/.ciel
+LIBRELANE_IMAGE ?= ghcr.io/librelane/librelane:3.0.16
 
 SRAM_MODEL := $(PDK_ROOT)/sky130A/libs.ref/sky130_sram_macros/verilog/sky130_sram_1kbyte_1rw1r_32x256_8.v
 
-RTL := rtl/mips_pkg.sv \
-       rtl/mips_alu.sv \
-       rtl/mips_decoder.sv \
-       rtl/mips_register_file.sv \
-       rtl/mips_controller.sv \
-       rtl/mips_datapath.sv \
-       rtl/mips_top.sv
+# Verilator needs the package before the modules that import it
+RTL := rtl/mips_pkg.sv $(filter-out rtl/mips_pkg.sv,$(wildcard rtl/*.sv))
 
 UNIT_TESTS := tb_mips_alu tb_mips_decoder tb_mips_register_file
 TESTBENCHES := $(addprefix dv/,$(addsuffix .sv,$(UNIT_TESTS) tb_mips_top))
 PROGRAMS := $(filter-out dv/programs/crt0.s,$(wildcard dv/programs/*.s))
 
 BUILD := build
+SYN_RUN := pnr/runs/syn
 VERILATOR_FLAGS := --binary --timing --timescale 1ns/1ps --assert -Wall dv/verilator.vlt
 
-.PHONY: test run lint format clean
+# LibreLane and its tools run from the image; the repository and the PDK are
+# mounted at their own paths so the paths in its reports match the host's
+IN_LIBRELANE := docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR):$(CURDIR) \
+                -v $(PDK_ROOT):$(PDK_ROOT) -w $(CURDIR) $(LIBRELANE_IMAGE)
+
+.PHONY: test run lint format syn clean
 
 test: $(UNIT_TESTS:%=$(BUILD)/%/sim) $(BUILD)/tb_mips_top/sim $(PROGRAMS:dv/programs/%.s=$(BUILD)/programs/%.hex)
 	@failed=0; \
@@ -44,8 +46,13 @@ lint:
 format:
 	$(VERIBLE_FORMAT) --flagfile=lint/lowrisc-styleguide.verible_format --inplace $(RTL) $(TESTBENCHES)
 
+syn:
+	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag syn --overwrite --to OpenROAD.STAPrePNR pnr/config.yaml
+	@grep -E 'cells$$|Chip area' $(SYN_RUN)/*-yosys-synthesis/reports/stat.rpt
+	@cat $(SYN_RUN)/*-openroad-staprepnr/summary.rpt
+
 clean:
-	rm -rf $(BUILD)
+	rm -rf $(BUILD) pnr/runs
 
 $(BUILD)/%/sim: dv/%.sv $(RTL) $(SRAM_MODEL) dv/verilator.vlt
 	@mkdir -p $(@D)
