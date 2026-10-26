@@ -9,7 +9,7 @@ module mips_controller (
 
   import mips_pkg::*;
 
-  // the SRAM answers a read on the clock edge after the request, so every
+  // the memory answers a read on the clock edge after the request, so every
   // memory read takes two states: one to request, one to take the data
   typedef enum logic [3:0] {
     StFetch,

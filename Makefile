@@ -7,12 +7,12 @@ MIPS_OBJCOPY   ?= mips-linux-gnu-objcopy
 PDK_ROOT       ?= $(HOME)/.ciel
 LIBRELANE_IMAGE ?= ghcr.io/librelane/librelane:3.0.16
 
-SRAM_MODEL := $(PDK_ROOT)/sky130A/libs.ref/sky130_sram_macros/verilog/sky130_sram_1kbyte_1rw1r_32x256_8.v
+PDK_DIR := $(PDK_ROOT)/sky130A
 
 # Verilator needs the package before the modules that import it
 RTL := rtl/mips_pkg.sv $(filter-out rtl/mips_pkg.sv,$(wildcard rtl/*.sv))
 
-UNIT_TESTS := tb_mips_alu tb_mips_decoder tb_mips_register_file
+UNIT_TESTS := tb_mips_alu tb_mips_decoder tb_mips_ram tb_mips_register_file
 TESTBENCHES := $(addprefix dv/,$(addsuffix .sv,$(UNIT_TESTS) tb_mips_top))
 PROGRAMS := $(filter-out dv/programs/crt0.s,$(wildcard dv/programs/*.s))
 
@@ -41,22 +41,21 @@ run: $(BUILD)/tb_mips_top/sim $(PROG:dv/programs/%.s=$(BUILD)/programs/%.hex)
 
 lint:
 	$(VERIBLE_LINT) --rules_config=lint/lowrisc-styleguide.rules.verible_lint $(RTL) $(TESTBENCHES)
-	$(VERILATOR) --lint-only --timing -Wall dv/verilator.vlt --top-module mips_top $(RTL) $(SRAM_MODEL)
+	$(VERILATOR) --lint-only --timing -Wall dv/verilator.vlt --top-module mips_top $(RTL)
 
 format:
 	$(VERIBLE_FORMAT) --flagfile=lint/lowrisc-styleguide.verible_format --inplace $(RTL) $(TESTBENCHES)
 
-syn:
-	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag syn --overwrite --to OpenROAD.STAPrePNR pnr/config.yaml
+syn: $(PDK_DIR)
+	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag syn --overwrite --to Checker.NetlistAssignStatements pnr/config.yaml
 	@grep -E 'cells$$|Chip area' $(SYN_RUN)/*-yosys-synthesis/reports/stat.rpt
-	@cat $(SYN_RUN)/*-openroad-staprepnr/summary.rpt
 
 clean:
 	rm -rf $(BUILD) pnr/runs
 
-$(BUILD)/%/sim: dv/%.sv $(RTL) $(SRAM_MODEL) dv/verilator.vlt
+$(BUILD)/%/sim: dv/%.sv $(RTL) dv/verilator.vlt
 	@mkdir -p $(@D)
-	$(VERILATOR) $(VERILATOR_FLAGS) --top-module $* -Mdir $(BUILD)/$* -o sim $(RTL) $(SRAM_MODEL) $< >/dev/null
+	$(VERILATOR) $(VERILATOR_FLAGS) --top-module $* -Mdir $(BUILD)/$* -o sim $(RTL) $< >/dev/null
 
 $(BUILD)/programs/crt0.o: dv/programs/crt0.s
 	@mkdir -p $(@D)
@@ -69,9 +68,9 @@ $(BUILD)/programs/%.o: dv/programs/%.s dv/programs/common.inc
 $(BUILD)/programs/%.elf: $(BUILD)/programs/%.o $(BUILD)/programs/crt0.o dv/programs/link.ld
 	$(MIPS_LD) -EB --no-warn-rwx-segments -T dv/programs/link.ld -o $@ $(BUILD)/programs/crt0.o $<
 
-# 32-bit words addressed by word, the layout the SRAM model's array takes
+# 32-bit words addressed by word, the layout the memory's array takes
 $(BUILD)/programs/%.hex: $(BUILD)/programs/%.elf
 	$(MIPS_OBJCOPY) -O verilog --verilog-data-width=4 $< $@
 
-$(SRAM_MODEL):
+$(PDK_DIR):
 	@echo "no SkyWater 130 PDK at PDK_ROOT=$(PDK_ROOT): install it with ciel (see README) or set PDK_ROOT" >&2; exit 1

@@ -6,6 +6,7 @@ package mips_pkg;
   parameter int unsigned MemWordAddrWidth = 8;
   parameter int unsigned MemWordWidth = 32;
   parameter int unsigned MemBytesPerWord = MemWordWidth / DataWidth;
+  parameter int unsigned MemWordCount = 2 ** MemWordAddrWidth;
 
   // a store to this byte address also drives the chip's output port
   parameter logic [DataWidth-1:0] IoPortAddr = 8'hFF;

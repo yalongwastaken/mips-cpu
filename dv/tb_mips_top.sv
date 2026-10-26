@@ -34,7 +34,7 @@ module tb_mips_top;
     if (!$value$plusargs("max_cycles=%d", max_cycles)) begin
       max_cycles = 10000;
     end
-    $readmemh(program_hex, dut.u_sram.mem);
+    $readmemh(program_hex, dut.u_ram.memory_words);
 
     repeat (2) @(posedge clk);
     rst_n = 1'b1;
