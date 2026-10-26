@@ -1,7 +1,4 @@
 `verilator_config
 
-// the PDK's SRAM model is third-party behavioral code, not ours to lint
-lint_off -file "*/sky130_sram_macros/*"
-
 // each module uses only some of the shared package parameters
 lint_off -rule UNUSEDPARAM -file "*mips_pkg.sv"

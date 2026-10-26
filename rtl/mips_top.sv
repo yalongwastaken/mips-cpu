@@ -18,7 +18,6 @@ module mips_top (
   logic        [ MemBytesPerWord-1:0] mem_byte_enable;
   logic        [    MemWordWidth-1:0] mem_write_data;
   logic        [    MemWordWidth-1:0] mem_read_data;
-  logic        [    MemWordWidth-1:0] unused_read_port_data;
 
   mips_decoder u_decoder (
     .instr_i (instr),
@@ -50,24 +49,14 @@ module mips_top (
     .io_o
   );
 
-  // port 1 is a second read-only port the multicycle core has no use for;
-  // VERBOSE exists only in the simulation model, which otherwise prints every access
-  sky130_sram_1kbyte_1rw1r_32x256_8 #(
-`ifndef SYNTHESIS
-    .VERBOSE(0)
-`endif
-  ) u_sram (
-    .clk0  (clk_i),
-    .csb0  (~mem_req),
-    .web0  (~mem_write),
-    .wmask0(mem_byte_enable),
-    .addr0 (mem_word_addr),
-    .din0  (mem_write_data),
-    .dout0 (mem_read_data),
-    .clk1  (clk_i),
-    .csb1  (1'b1),
-    .addr1 ('0),
-    .dout1 (unused_read_port_data)
+  mips_ram u_ram (
+    .clk_i,
+    .req_i        (mem_req),
+    .write_i      (mem_write),
+    .word_addr_i  (mem_word_addr),
+    .byte_enable_i(mem_byte_enable),
+    .write_data_i (mem_write_data),
+    .read_data_o  (mem_read_data)
   );
 
 endmodule

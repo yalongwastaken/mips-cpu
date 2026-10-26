@@ -42,7 +42,7 @@ module mips_datapath (
   assign jump_target_word = instr_q[7:0];
 
   // ---------------------------------------------------------------------------
-  // Program counter: code spans the whole SRAM, so the PC is wider than the
+  // Program counter: code spans the whole memory, so the PC is wider than the
   // data path and has its own adders. Branch offsets wrap at the PC's width.
   // ---------------------------------------------------------------------------
   always_comb begin
