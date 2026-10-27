@@ -25,12 +25,12 @@ module tb_mips_register_file;
     .write_data_i  (write_data)
   );
 
-  function automatic logic [DataWidth-1:0] value_for(int unsigned reg_index);
+  function automatic logic [DataWidth-1:0] compute_written_value(int unsigned reg_index);
     return DataWidth'('hA5 ^ (reg_index * 7));
   endfunction
 
   function automatic logic [DataWidth-1:0] compute_expected_read_value(int unsigned reg_index);
-    return (reg_index == 0) ? '0 : value_for(reg_index);
+    return (reg_index == 0) ? '0 : compute_written_value(reg_index);
   endfunction
 
   initial begin
@@ -48,7 +48,7 @@ module tb_mips_register_file;
       @(negedge clk);
       write_enable = 1'b1;
       write_addr   = RegAddrWidth'(reg_index);
-      write_data   = value_for(reg_index);
+      write_data   = compute_written_value(reg_index);
     end
     @(negedge clk);
     write_enable = 1'b0;

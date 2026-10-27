@@ -17,8 +17,8 @@ module tb_mips_alu;
   );
 
   // plain integer arithmetic, so the expected value shares nothing with the RTL's operators
-  function automatic logic [DataWidth-1:0] expected_result(alu_op_e alu_op, int value_a,
-                                                           int value_b);
+  function automatic logic [DataWidth-1:0] compute_expected_alu_result(alu_op_e alu_op, int value_a,
+                                                                       int value_b);
     int signed_a = (value_a >= FirstNegativeValue) ? value_a - OperandValueCount : value_a;
     int signed_b = (value_b >= FirstNegativeValue) ? value_b - OperandValueCount : value_b;
     unique case (alu_op)
@@ -42,10 +42,10 @@ module tb_mips_alu;
           operand_a         = DataWidth'(value_a);
           operand_b         = DataWidth'(value_b);
           #1;
-          if (alu_result !== expected_result(alu_op_under_test, value_a, value_b)) begin
+          if (alu_result !== compute_expected_alu_result(alu_op_under_test, value_a, value_b)) begin
             mismatch_count++;
-            $error("%s %0d, %0d: got %0d, expected %0d", alu_op_under_test.name(), value_a,
-                   value_b, alu_result, expected_result(alu_op_under_test, value_a, value_b));
+            $error("%s %0d, %0d: got %0d, expected %0d", alu_op_under_test.name(), value_a, value_b,
+                   alu_result, compute_expected_alu_result(alu_op_under_test, value_a, value_b));
           end
         end
       end
