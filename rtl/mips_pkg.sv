@@ -1,15 +1,19 @@
 package mips_pkg;
 
   parameter int unsigned DataWidth = 8;
-  parameter int unsigned PcWidth = 10;
   parameter int unsigned RegAddrWidth = 5;
-  parameter int unsigned MemWordAddrWidth = 8;
   parameter int unsigned MemWordWidth = 32;
   parameter int unsigned MemBytesPerWord = MemWordWidth / DataWidth;
+  parameter int unsigned MemByteOffsetWidth = $clog2(MemBytesPerWord);
+  // jump targets are DataWidth-bit word indices, and the memory holds every
+  // word one reaches
+  parameter int unsigned MemWordAddrWidth = DataWidth;
   parameter int unsigned MemWordCount = 2 ** MemWordAddrWidth;
+  parameter int unsigned PcWidth = MemWordAddrWidth + MemByteOffsetWidth;
 
-  // a store to this byte address also drives the chip's output port
-  parameter logic [DataWidth-1:0] IoPortAddr = 8'hFF;
+  // the last byte address the data path reaches; a store there also drives the
+  // chip's output port
+  parameter logic [DataWidth-1:0] IoPortAddr = '1;
 
   typedef enum logic [5:0] {
     OpRType = 6'b000000,

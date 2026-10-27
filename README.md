@@ -10,11 +10,12 @@ open-source tools.
 
 The core runs a subset of the MIPS I instruction set with standard encodings:
 `lb`, `sb`, `add`, `sub`, `and`, `or`, `slt`, `beq`, and `j`, with `$0` fixed at
-zero. The data width, register count, PC width, and memory size are named in
-`rtl/mips_pkg.sv`, but the rest of the design is built around their values:
-changing one alone fails the build. Instructions are fetched as whole words from
-memory in big-endian order, and each runs over several cycles of the state
-machine in `rtl/mips_controller.sv`.
+zero. `rtl/mips_pkg.sv` holds the data width and register count and derives the
+PC width and memory size from the data width. They are names, not settings: the
+MIPS encoding fixes the register count and the 8-bit byte that `lb` and `sb`
+move. Instructions are fetched as whole words from memory in big-endian order,
+and each runs over several cycles of the state machine in
+`rtl/mips_controller.sv`.
 
 The memory, `rtl/mips_ram.sv`, behaves like a single-port SRAM: one read or
 write per cycle, a write enable per byte, and read data on the next clock edge.
