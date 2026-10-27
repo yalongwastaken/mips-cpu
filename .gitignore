@@ -1,3 +1,6 @@
 build/
 pnr/runs/
 .DS_Store
+
+# local working notes
+CLAUDE.md
