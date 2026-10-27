@@ -53,8 +53,7 @@ syn: | $(PDK_ROOT)
 pnr: | $(PDK_ROOT)
 	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag pnr --overwrite pnr/config.yaml
 	$(IN_LIBRELANE) python3 pnr/report_signoff.py $(PNR_RUN)/final/metrics.json
-	$(IN_LIBRELANE) klayout -b -r pnr/render_layout.py -rd gds=$(PNR_RUN)/final/gds/mips_top.gds \
-	  -rd lyp=$(PDK_ROOT)/sky130A/libs.tech/klayout/tech/sky130A.lyp -rd png=$(PNR_RUN)/layout.png
+	$(IN_LIBRELANE) klayout -b -r pnr/render_layout.py -rd run=$(PNR_RUN) -rd png=$(PNR_RUN)/layout.png
 
 clean:
 	rm -rf $(BUILD) pnr/runs

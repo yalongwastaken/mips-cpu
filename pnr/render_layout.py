@@ -1,13 +1,16 @@
-"""Render a GDS's signal routing and power grid to a PNG, in KLayout batch mode.
+"""Render a LibreLane run's routing and power grid to a PNG, in KLayout batch mode.
 
 Usage:
-    klayout -b -r render_layout.py -rd gds=<in.gds> -rd lyp=<pdk.lyp> \\
-        -rd png=<out.png>
+    klayout -b -r render_layout.py -rd run=<run directory> -rd png=<out.png>
 
-The layer colors come from the PDK's own KLayout layer properties. Only metal 2
+The GDS and the PDK's KLayout layer properties come from the run's resolved
+configuration, the same ones LibreLane's own KLayout steps used. Only metal 2
 through 5 are shown: the cells and metal 1 cover the whole die at this scale
 and hide the routing.
 """
+
+import json
+from pathlib import Path
 
 import pya
 
@@ -15,12 +18,14 @@ import pya
 SHOWN_LAYERS = {(69, 20), (70, 20), (71, 20), (72, 20)}
 IMAGE_SIDE_PIXELS = 1400
 
-gds_path, lyp_path, png_path = gds, lyp, png  # noqa: F821, KLayout defines these from -rd
+run_dir, png_path = Path(run), png  # noqa: F821, KLayout defines these from -rd
+resolved_config = json.loads((run_dir / "resolved.json").read_text())
+gds_path = run_dir / "final" / "gds" / f"{resolved_config['DESIGN_NAME']}.gds"
 
 layout_view = pya.LayoutView()
-layout_view.load_layout(gds_path, 0)
+layout_view.load_layout(str(gds_path), 0)
 layout_view.max_hier()
-layout_view.load_layer_props(lyp_path)
+layout_view.load_layer_props(resolved_config["KLAYOUT_PROPERTIES"])
 layer_iterator = layout_view.begin_layers()
 while not layer_iterator.at_end():
     layer_properties = layer_iterator.current()
