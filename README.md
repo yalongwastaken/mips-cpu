@@ -74,9 +74,9 @@ mips-cpu/
 - Verilator 5.032
 - GNU binutils for `mips-linux-gnu`, 2.45.90
 - verible v0.0-4296-g0f262651
-- GNU Make
+- GNU Make 4.4.1
 
-Synthesis and layout also need Docker, with LibreLane's image
+Synthesis and layout also need Docker 29.1.3, with LibreLane's image
 `ghcr.io/librelane/librelane:3.0.16`. The first `make syn` or `make pnr`
 downloads the SkyWater 130 PDK version LibreLane pins, a few gigabytes, into
 `PDK_ROOT`, which defaults to `~/.ciel`.
