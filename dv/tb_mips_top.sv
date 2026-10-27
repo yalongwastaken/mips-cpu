@@ -44,14 +44,25 @@ module tb_mips_top;
       @(posedge clk);
     end
 
-    if (io_port == mips_test_pkg::PassCode) begin
-      $display("PASS %s", program_hex);
-      $finish;
-    end else if (io_port == '0) begin
+    if (io_port == '0) begin
       $fatal(1, "FAIL %s: no verdict after %0d cycles", program_hex, VerdictTimeoutCycles);
-    end else begin
+    end else if (io_port != mips_test_pkg::PassCode) begin
       $fatal(1, "FAIL %s: check %0d failed", program_hex, io_port);
     end
+
+    for (
+        int unsigned cycle_count = 0;
+        cycle_count < VerdictTimeoutCycles && io_port != '0;
+        cycle_count++
+    ) begin
+      @(posedge clk);
+    end
+
+    if (io_port != '0) begin
+      $fatal(1, "FAIL %s: pass code without its closing zero", program_hex);
+    end
+    $display("PASS %s", program_hex);
+    $finish;
   end
 
 endmodule

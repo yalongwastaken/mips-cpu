@@ -20,14 +20,21 @@
         lb      \reg, %lo(constant_table + (\value))($0)
         .endm
 
-        .macro  report code
+        .macro  store_verdict code
         load_constant $31, \code
         sb      $31, IO_PORT_ADDR($0)
+        .endm
+
+        .macro  halt
 99:     j       99b
         .endm
 
+        # a pass stores twice and a failure once before halting, so a load fault
+        # that turns a failure code into PASS_CODE still leaves no closing zero
         .macro  pass
-        report  PASS_CODE
+        store_verdict PASS_CODE
+        sb      $0, IO_PORT_ADDR($0)
+        halt
         .endm
 
         # code numbers the failed check; dv/mips_test_pkg.sv says which values
@@ -36,7 +43,8 @@
         .if     ((\code) == 0) || ((\code) == PASS_CODE)
         .error  "fail \code: 0 and PASS_CODE are not failure codes"
         .endif
-        report  \code
+        store_verdict \code
+        halt
         .endm
 
         .macro  check_equal rs, rt, code
