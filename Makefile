@@ -11,11 +11,14 @@ LIBRELANE_IMAGE ?= ghcr.io/librelane/librelane:3.0.16
 # Verilator needs the package before the modules that import it
 RTL := rtl/mips_pkg.sv $(filter-out rtl/mips_pkg.sv,$(wildcard rtl/*.sv))
 
+DV_PACKAGES := dv/mips_test_pkg.sv
 UNIT_TESTS := tb_mips_alu tb_mips_decoder tb_mips_ram tb_mips_register_file
 TESTBENCHES := $(addprefix dv/,$(addsuffix .sv,$(UNIT_TESTS) tb_mips_top))
+DV_SOURCES := $(DV_PACKAGES) $(TESTBENCHES) dv/export_package_constants.sv
 PROGRAMS := $(filter-out dv/programs/crt0.s,$(wildcard dv/programs/*.s))
 
 BUILD := build
+PACKAGE_CONSTANTS := $(BUILD)/programs/package_constants.inc
 SYN_RUN := pnr/runs/syn
 PNR_RUN := pnr/runs/pnr
 VERILATOR_FLAGS := --binary --timing --timescale 1ns/1ps --assert -Wall dv/verilator.vlt
@@ -40,11 +43,11 @@ run: $(BUILD)/tb_mips_top/sim $(PROG:dv/programs/%.s=$(BUILD)/programs/%.hex)
 	$(BUILD)/tb_mips_top/sim +program=$(PROG:dv/programs/%.s=$(BUILD)/programs/%.hex)
 
 lint:
-	$(VERIBLE_LINT) --rules_config=lint/lowrisc-styleguide.rules.verible_lint $(RTL) $(TESTBENCHES)
+	$(VERIBLE_LINT) --rules_config=lint/lowrisc-styleguide.rules.verible_lint $(RTL) $(DV_SOURCES)
 	$(VERILATOR) --lint-only --timing -Wall dv/verilator.vlt --top-module mips_top $(RTL)
 
 format:
-	$(VERIBLE_FORMAT) --flagfile=lint/lowrisc-styleguide.verible_format --inplace $(RTL) $(TESTBENCHES)
+	$(VERIBLE_FORMAT) --flagfile=lint/lowrisc-styleguide.verible_format --inplace $(RTL) $(DV_SOURCES)
 
 syn: | $(PDK_ROOT)
 	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag syn --overwrite --to Checker.NetlistAssignStatements pnr/config.yaml
@@ -58,20 +61,20 @@ pnr: | $(PDK_ROOT)
 clean:
 	rm -rf $(BUILD) pnr/runs
 
-$(BUILD)/%/sim: dv/%.sv $(RTL) dv/verilator.vlt
+$(BUILD)/%/sim: dv/%.sv $(RTL) $(DV_PACKAGES) dv/verilator.vlt
 	@mkdir -p $(@D)
-	$(VERILATOR) $(VERILATOR_FLAGS) --top-module $* -Mdir $(BUILD)/$* -o sim $(RTL) $< >/dev/null
+	$(VERILATOR) $(VERILATOR_FLAGS) --top-module $* -Mdir $(BUILD)/$* -o sim $(RTL) $(DV_PACKAGES) $< >/dev/null
 
-$(BUILD)/programs/crt0.o: dv/programs/crt0.s
+$(PACKAGE_CONSTANTS): $(BUILD)/export_package_constants/sim
 	@mkdir -p $(@D)
-	$(MIPS_AS) -EB -march=mips1 -mno-shared -call_nonpic -o $@ $<
+	$< +verilator+quiet +constants=$@
 
-$(BUILD)/programs/%.o: dv/programs/%.s dv/programs/common.inc
+$(BUILD)/programs/%.o: dv/programs/%.s dv/programs/common.inc $(PACKAGE_CONSTANTS)
 	@mkdir -p $(@D)
-	$(MIPS_AS) -EB -march=mips1 -mno-shared -call_nonpic -I dv/programs -o $@ $<
+	$(MIPS_AS) -EB -march=mips1 -mno-shared -call_nonpic -I dv/programs -I $(dir $(PACKAGE_CONSTANTS)) -o $@ $<
 
-$(BUILD)/programs/%.elf: $(BUILD)/programs/%.o $(BUILD)/programs/crt0.o dv/programs/link.ld
-	$(MIPS_LD) -EB --no-warn-rwx-segments -T dv/programs/link.ld -o $@ $(BUILD)/programs/crt0.o $<
+$(BUILD)/programs/%.elf: $(BUILD)/programs/%.o $(BUILD)/programs/crt0.o dv/programs/link.ld $(PACKAGE_CONSTANTS)
+	$(MIPS_LD) -EB --no-warn-rwx-segments -L $(dir $(PACKAGE_CONSTANTS)) -T dv/programs/link.ld -o $@ $(BUILD)/programs/crt0.o $<
 
 # 32-bit words addressed by word, the layout the memory's array takes
 $(BUILD)/programs/%.hex: $(BUILD)/programs/%.elf

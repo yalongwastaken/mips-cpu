@@ -26,20 +26,21 @@ module mips_datapath (
   logic [DataWidth-1:0] immediate;
   logic [DataWidth-1:0] jump_target_word;
   logic [DataWidth-1:0] rf_read_data_a, rf_read_data_b;
-  logic [    RegAddrWidth-1:0] rf_write_addr;
-  logic [       DataWidth-1:0] rf_write_data;
+  logic [      RegAddrWidth-1:0] rf_write_addr;
+  logic [         DataWidth-1:0] rf_write_data;
 
-  logic [       DataWidth-1:0] data_byte_addr;
-  logic [MemWordAddrWidth-1:0] data_word_addr;
-  logic [                 1:0] data_byte_offset;
-  logic [                 1:0] data_byte_lane;
-  logic [       DataWidth-1:0] loaded_byte;
+  logic [         DataWidth-1:0] data_byte_addr;
+  logic [  MemWordAddrWidth-1:0] data_word_addr;
+  logic [  MemWordAddrWidth-1:0] pc_word_addr;
+  logic [MemByteOffsetWidth-1:0] data_byte_offset;
+  logic [MemByteOffsetWidth-1:0] data_byte_lane;
+  logic [         DataWidth-1:0] loaded_byte;
 
   assign rs               = instr_q[25:21];
   assign rt               = instr_q[20:16];
   assign rd               = instr_q[15:11];
-  assign immediate        = instr_q[7:0];
-  assign jump_target_word = instr_q[7:0];
+  assign immediate        = instr_q[DataWidth-1:0];
+  assign jump_target_word = instr_q[DataWidth-1:0];
 
   // ---------------------------------------------------------------------------
   // Program counter: code spans the whole memory, so the PC is wider than the
@@ -47,16 +48,16 @@ module mips_datapath (
   // ---------------------------------------------------------------------------
   always_comb begin
     unique case (ctrl_i.pc_sel)
-      PcPlus4:        pc_d = pc_q + PcWidth'(4);
-      PcBranchTarget: pc_d = pc_q + {immediate, 2'b00};
-      PcJumpTarget:   pc_d = {jump_target_word, 2'b00};
+      PcPlus4:        pc_d = pc_q + PcWidth'(MemBytesPerWord);
+      PcBranchTarget: pc_d = pc_q + {immediate, MemByteOffsetWidth'(0)};
+      PcJumpTarget:   pc_d = {jump_target_word, MemByteOffsetWidth'(0)};
       default:        pc_d = pc_q;
     endcase
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      pc_q <= '0;
+      pc_q <= ResetPc;
     end else if (ctrl_i.pc_write) begin
       pc_q <= pc_d;
     end
@@ -116,17 +117,18 @@ module mips_datapath (
 
   // ---------------------------------------------------------------------------
   // Memory: big-endian, so byte offset 0 is the word's most significant byte.
-  // Data addresses come from the 8-bit ALU and reach only the first 256 bytes.
+  // Data addresses come from the ALU, so they reach only the bottom of memory.
   // ---------------------------------------------------------------------------
   assign data_byte_addr = alu_result_q;
-  assign data_byte_offset = data_byte_addr[1:0];
-  assign data_byte_lane = 2'(MemBytesPerWord - 1) - data_byte_offset;
+  assign data_byte_offset = data_byte_addr[MemByteOffsetWidth-1:0];
+  assign data_byte_lane = MemByteOffsetWidth'(MemBytesPerWord - 1) - data_byte_offset;
   assign loaded_byte = mem_read_data_i[32'(data_byte_lane)*DataWidth+:DataWidth];
 
   assign mem_req_o = ctrl_i.mem_req;
   assign mem_write_o = ctrl_i.mem_write;
-  assign data_word_addr = MemWordAddrWidth'(data_byte_addr[DataWidth-1:2]);
-  assign mem_word_addr_o = (ctrl_i.mem_addr_sel == MemAddrPc) ? pc_q[PcWidth-1:2] : data_word_addr;
+  assign data_word_addr = MemWordAddrWidth'(data_byte_addr[DataWidth-1:MemByteOffsetWidth]);
+  assign pc_word_addr = pc_q[PcWidth-1:MemByteOffsetWidth];
+  assign mem_word_addr_o = (ctrl_i.mem_addr_sel == MemAddrPc) ? pc_word_addr : data_word_addr;
   assign mem_byte_enable_o = ctrl_i.mem_write ? MemBytesPerWord'(1 << data_byte_lane) : '0;
   assign mem_write_data_o = {MemBytesPerWord{operand_b_q}};
 

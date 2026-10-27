@@ -10,11 +10,12 @@ open-source tools.
 
 The core runs a subset of the MIPS I instruction set with standard encodings:
 `lb`, `sb`, `add`, `sub`, `and`, `or`, `slt`, `beq`, and `j`, with `$0` fixed at
-zero. The data width, register count, PC width, and memory size are named in
-`rtl/mips_pkg.sv`, but the rest of the design is built around their values:
-changing one alone fails the build. Instructions are fetched as whole words from
-memory in big-endian order, and each runs over several cycles of the state
-machine in `rtl/mips_controller.sv`.
+zero. `rtl/mips_pkg.sv` holds the data width and register count and derives the
+PC width and memory size from the data width. They are names, not settings: the
+MIPS encoding fixes the register count and the 8-bit byte that `lb` and `sb`
+move. Instructions are fetched as whole words from memory in big-endian order,
+and each runs over several cycles of the state machine in
+`rtl/mips_controller.sv`.
 
 The memory, `rtl/mips_ram.sv`, behaves like a single-port SRAM: one read or
 write per cycle, a write enable per byte, and read data on the next clock edge.
@@ -32,7 +33,11 @@ Programs are MIPS assembly, built with GNU binutils. The core has no branch
 delay slots and no immediate arithmetic, so programs turn off the assembler's
 reordering and load constants from memory, and immediates use only their low 8
 bits. `dv/programs/common.inc` sets this up and provides the pass and fail
-reporting the tests use. `dv/programs/link.ld` is the memory map.
+reporting the tests use. `dv/programs/link.ld` is the memory map. The values
+programs share with the chip and its testbench, such as the I/O port address and
+the pass code, come from the SystemVerilog packages, and
+`dv/export_package_constants.sv` writes them out for the assembler and linker at
+build time.
 
 ## Results
 
@@ -54,7 +59,7 @@ publishes the image from `main`:
 ```
 mips-cpu/
 ├── rtl/              # the core, its memory, and the chip top
-├── dv/               # unit testbenches and the whole-chip testbench
+├── dv/               # testbenches, and the constants programs share with them
 │   └── programs/     # MIPS test programs, memory map, shared macros
 ├── lint/             # lowRISC lint rules and formatter settings
 ├── pnr/              # the LibreLane flow, its sign-off report, and the render
@@ -69,9 +74,9 @@ mips-cpu/
 - Verilator 5.032
 - GNU binutils for `mips-linux-gnu`, 2.45.90
 - verible v0.0-4296-g0f262651
-- GNU Make
+- GNU Make 4.4.1
 
-Synthesis and layout also need Docker, with LibreLane's image
+Synthesis and layout also need Docker 29.1.3, with LibreLane's image
 `ghcr.io/librelane/librelane:3.0.16`. The first `make syn` or `make pnr`
 downloads the SkyWater 130 PDK version LibreLane pins, a few gigabytes, into
 `PDK_ROOT`, which defaults to `~/.ciel`.

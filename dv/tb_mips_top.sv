@@ -1,12 +1,13 @@
-// Runs one program image on the whole chip. A program reports its verdict by
-// storing to the I/O port: 1 means pass, any other value is a failure code.
+// Runs one program image on the whole chip, which reports its verdict on the I/O
+// port as mips_test_pkg describes.
 module tb_mips_top;
 
-  localparam logic [7:0] PassCode = 8'd1;
+  // far longer than any test program runs, so reaching it means the program hung
+  localparam int unsigned VerdictTimeoutCycles = 10000;
 
-  logic       clk = 1'b0;
-  logic       rst_n = 1'b0;
-  logic [7:0] io_port;
+  logic                           clk = 1'b0;
+  logic                           rst_n = 1'b0;
+  logic [mips_pkg::DataWidth-1:0] io_port;
 
   initial forever #5 clk = ~clk;
 
@@ -16,8 +17,7 @@ module tb_mips_top;
     .io_o  (io_port)
   );
 
-  string       program_hex;
-  int unsigned max_cycles;
+  string program_hex;
 
   // the core runs an undecodable instruction as a no-op, so a program that strays
   // into empty memory would keep running; in simulation that is a failure
@@ -31,28 +31,38 @@ module tb_mips_top;
     if (!$value$plusargs("program=%s", program_hex)) begin
       $fatal(1, "missing +program=<image.hex>");
     end
-    if (!$value$plusargs("max_cycles=%d", max_cycles)) begin
-      max_cycles = 10000;
-    end
     $readmemh(program_hex, dut.u_ram.memory_words);
 
     repeat (2) @(posedge clk);
     rst_n = 1'b1;
 
     for (
-        int unsigned cycle_count = 0; cycle_count < max_cycles && io_port == '0; cycle_count++
+        int unsigned cycle_count = 0;
+        cycle_count < VerdictTimeoutCycles && io_port == '0;
+        cycle_count++
     ) begin
       @(posedge clk);
     end
 
-    if (io_port == PassCode) begin
-      $display("PASS %s", program_hex);
-      $finish;
-    end else if (io_port == '0) begin
-      $fatal(1, "FAIL %s: no verdict after %0d cycles", program_hex, max_cycles);
-    end else begin
+    if (io_port == '0) begin
+      $fatal(1, "FAIL %s: no verdict after %0d cycles", program_hex, VerdictTimeoutCycles);
+    end else if (io_port != mips_test_pkg::PassCode) begin
       $fatal(1, "FAIL %s: check %0d failed", program_hex, io_port);
     end
+
+    for (
+        int unsigned cycle_count = 0;
+        cycle_count < VerdictTimeoutCycles && io_port != '0;
+        cycle_count++
+    ) begin
+      @(posedge clk);
+    end
+
+    if (io_port != '0) begin
+      $fatal(1, "FAIL %s: pass code without its closing zero", program_hex);
+    end
+    $display("PASS %s", program_hex);
+    $finish;
   end
 
 endmodule

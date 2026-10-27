@@ -4,8 +4,9 @@ Usage: python3 report_signoff.py <run>/final/metrics.json
 
 Prints every sign-off count and the worst setup and hold slack to standard
 output. LibreLane itself fails a run on every count here except antenna and
-fanout violations, so this exits 1 when either of those is nonzero, and 2 when
-the metrics file lacks a metric, which means LibreLane renamed it.
+fanout violations, so this exits 1 when either of those is nonzero. It exits 2
+when it is not given exactly one metrics file, when the file cannot be read as
+JSON, or when it lacks a metric, which means LibreLane renamed it.
 """
 
 import json
@@ -39,8 +40,15 @@ SLACK_LABELS = {
 
 
 def main() -> int:
+    if len(sys.argv) != 2:
+        print(__doc__, file=sys.stderr)
+        return 2
     metrics_path = Path(sys.argv[1])
-    run_metrics = json.loads(metrics_path.read_text())
+    try:
+        run_metrics = json.loads(metrics_path.read_text())
+    except (OSError, ValueError) as read_error:
+        print(f"cannot read {metrics_path}: {read_error}", file=sys.stderr)
+        return 2
     run_dir = metrics_path.parent.parent
 
     missing_metric_names = [

@@ -12,9 +12,7 @@ module mips_register_file (
 
   import mips_pkg::*;
 
-  localparam int unsigned NumRegs = 2 ** RegAddrWidth;
-
-  logic [NumRegs-1:0][DataWidth-1:0] regs_q;
+  logic [RegCount-1:0][DataWidth-1:0] regs_q;
 
   // $0 is never written, so it reads as the zero it was reset to
   always_ff @(posedge clk_i or negedge rst_ni) begin

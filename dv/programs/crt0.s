@@ -1,10 +1,15 @@
 # Linked into every test program: the reset jump and the constant table.
 
-        .set    noreorder
+        .include "common.inc"
 
         .section .text.reset, "ax"
         j       _start
 
         .section .data.constants, "aw"
-        .byte   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-        .byte   16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+        .globl  constant_table
+constant_table:
+        .set    constant_value, 0
+        .rept   CONSTANT_COUNT
+        .byte   constant_value
+        .set    constant_value, constant_value + 1
+        .endr

@@ -11,12 +11,12 @@ _start:
         load_constant $5, 1
 
         beq     $1, $2, 1f
-        report  2
+        fail    2
 1:
         beq     $1, $3, 2f
         j       3f
 2:
-        report  3
+        fail    3
 3:
         # count up with a backward j
         add     $4, $0, $0
@@ -36,6 +36,6 @@ _start:
         check_equal $6, $1, 5
 
         j       7f
-        report  6
+        fail    6
 7:
         pass

@@ -4,14 +4,13 @@
 module tb_mips_ram;
   import mips_pkg::*;
 
-  logic                               clk = 1'b0;
-  logic                               mem_req;
-  logic                               mem_write;
-  logic        [MemWordAddrWidth-1:0] mem_word_addr;
-  logic        [ MemBytesPerWord-1:0] mem_byte_enable;
-  logic        [    MemWordWidth-1:0] mem_write_data;
-  logic        [    MemWordWidth-1:0] mem_read_data;
-  int unsigned                        mismatch_count = 0;
+  logic                        clk = 1'b0;
+  logic                        mem_req;
+  logic                        mem_write;
+  logic [MemWordAddrWidth-1:0] mem_word_addr;
+  logic [ MemBytesPerWord-1:0] mem_byte_enable;
+  logic [    MemWordWidth-1:0] mem_write_data;
+  logic [    MemWordWidth-1:0] mem_read_data;
 
   initial forever #5 clk = ~clk;
 
@@ -41,8 +40,8 @@ module tb_mips_ram;
 
   task automatic expect_read_data(logic [MemWordWidth-1:0] expected_read_data, string check_name);
     if (mem_read_data !== expected_read_data) begin
-      mismatch_count++;
-      $error("%s: read %h, expected %h", check_name, mem_read_data, expected_read_data);
+      $fatal(1, "FAIL tb_mips_ram: %s: read %h, expected %h", check_name, mem_read_data,
+             expected_read_data);
     end
   endtask
 
@@ -58,16 +57,18 @@ module tb_mips_ram;
       expect_read_data(MemWordWidth'(word_index), $sformatf("word %0d", word_index));
     end
 
-    // every lane gets a different byte, so a byte that lands in the wrong lane shows up
-    for (int unsigned byte_lane = 0; byte_lane < MemBytesPerWord; byte_lane++) begin
-      lane_write_data[byte_lane*DataWidth+:DataWidth] = DataWidth'(byte_lane + 1);
-    end
-    for (int unsigned byte_lane = 0; byte_lane < MemBytesPerWord; byte_lane++) begin
-      drive_cycle(1'b1, 1'b1, 0, MemBytesPerWord'(1 << byte_lane), lane_write_data);
-      expected_word_0[byte_lane*DataWidth+:DataWidth] =
-          lane_write_data[byte_lane*DataWidth+:DataWidth];
+    // each round writes a byte unique to the round and the lane into every lane, so
+    // a byte that lands in the wrong lane or in a lane not enabled shows up
+    for (int unsigned enabled_lane = 0; enabled_lane < MemBytesPerWord; enabled_lane++) begin
+      for (int unsigned filled_lane = 0; filled_lane < MemBytesPerWord; filled_lane++) begin
+        lane_write_data[filled_lane*DataWidth+:DataWidth] =
+            DataWidth'(enabled_lane * MemBytesPerWord + filled_lane + 1);
+      end
+      drive_cycle(1'b1, 1'b1, 0, MemBytesPerWord'(1 << enabled_lane), lane_write_data);
+      expected_word_0[enabled_lane*DataWidth+:DataWidth] =
+          lane_write_data[enabled_lane*DataWidth+:DataWidth];
       drive_cycle(1'b1, 1'b0, 0, '0, '0);
-      expect_read_data(expected_word_0, $sformatf("word 0 after writing byte lane %0d", byte_lane));
+      expect_read_data(expected_word_0, $sformatf("word 0 after writing lane %0d", enabled_lane));
     end
 
     drive_cycle(1'b1, 1'b0, 1, '0, '0);
@@ -80,9 +81,6 @@ module tb_mips_ram;
     drive_cycle(1'b1, 1'b0, 2, '0, '0);
     expect_read_data('0, "word 2 after its write");
 
-    if (mismatch_count != 0) begin
-      $fatal(1, "FAIL tb_mips_ram: %0d mismatches", mismatch_count);
-    end
     $display("PASS tb_mips_ram");
     $finish;
   end
