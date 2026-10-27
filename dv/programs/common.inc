@@ -14,6 +14,9 @@
         .equ    CONSTANT_COUNT, 32
 
         .macro  load_constant reg, value
+        .if     ((\value) < 0) || ((\value) >= CONSTANT_COUNT)
+        .error  "load_constant \value is outside the constant table"
+        .endif
         lb      \reg, %lo(constant_table + (\value))($0)
         .endm
 
@@ -27,9 +30,17 @@
         report  PASS_CODE
         .endm
 
-        # failure codes are check numbers above PASS_CODE, below CONSTANT_COUNT
+        # code numbers the failed check; dv/mips_test_pkg.sv says which values
+        # tb_mips_top reads as no verdict and as a pass
+        .macro  fail code
+        .if     ((\code) == 0) || ((\code) == PASS_CODE)
+        .error  "fail \code: 0 and PASS_CODE are not failure codes"
+        .endif
+        report  \code
+        .endm
+
         .macro  check_equal rs, rt, code
         beq     \rs, \rt, 98f
-        report  \code
+        fail    \code
 98:
         .endm
