@@ -4,16 +4,17 @@ An 8-bit multicycle MIPS processor and its memory in SystemVerilog, built from
 the SkyWater 130 nm standard cells and carried from RTL to a signed-off GDS with
 open-source tools.
 
-> **Status: in progress.**
+> **Status: complete.**
 
 ## What It Does
 
 The core runs a subset of the MIPS I instruction set with standard encodings:
 `lb`, `sb`, `add`, `sub`, `and`, `or`, `slt`, `beq`, and `j`, with `$0` fixed at
-zero. The data width, register count, PC width, and memory sizes are parameters
-in `rtl/mips_pkg.sv`. Instructions are fetched as whole words from memory in
-big-endian order, and each runs over several cycles of the state machine in
-`rtl/mips_controller.sv`.
+zero. The data width, register count, PC width, and memory size are named in
+`rtl/mips_pkg.sv`, but the rest of the design is built around their values:
+changing one alone fails the build. Instructions are fetched as whole words from
+memory in big-endian order, and each runs over several cycles of the state
+machine in `rtl/mips_controller.sv`.
 
 The memory, `rtl/mips_ram.sv`, behaves like a single-port SRAM: one read or
 write per cycle, a write enable per byte, and read data on the next clock edge.
