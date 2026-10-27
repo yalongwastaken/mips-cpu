@@ -4,14 +4,13 @@
 module tb_mips_ram;
   import mips_pkg::*;
 
-  logic                               clk = 1'b0;
-  logic                               mem_req;
-  logic                               mem_write;
-  logic        [MemWordAddrWidth-1:0] mem_word_addr;
-  logic        [ MemBytesPerWord-1:0] mem_byte_enable;
-  logic        [    MemWordWidth-1:0] mem_write_data;
-  logic        [    MemWordWidth-1:0] mem_read_data;
-  int unsigned                        mismatch_count = 0;
+  logic                        clk = 1'b0;
+  logic                        mem_req;
+  logic                        mem_write;
+  logic [MemWordAddrWidth-1:0] mem_word_addr;
+  logic [ MemBytesPerWord-1:0] mem_byte_enable;
+  logic [    MemWordWidth-1:0] mem_write_data;
+  logic [    MemWordWidth-1:0] mem_read_data;
 
   initial forever #5 clk = ~clk;
 
@@ -41,8 +40,8 @@ module tb_mips_ram;
 
   task automatic expect_read_data(logic [MemWordWidth-1:0] expected_read_data, string check_name);
     if (mem_read_data !== expected_read_data) begin
-      mismatch_count++;
-      $error("%s: read %h, expected %h", check_name, mem_read_data, expected_read_data);
+      $fatal(1, "FAIL tb_mips_ram: %s: read %h, expected %h", check_name, mem_read_data,
+             expected_read_data);
     end
   endtask
 
@@ -82,9 +81,6 @@ module tb_mips_ram;
     drive_cycle(1'b1, 1'b0, 2, '0, '0);
     expect_read_data('0, "word 2 after its write");
 
-    if (mismatch_count != 0) begin
-      $fatal(1, "FAIL tb_mips_ram: %0d mismatches", mismatch_count);
-    end
     $display("PASS tb_mips_ram");
     $finish;
   end

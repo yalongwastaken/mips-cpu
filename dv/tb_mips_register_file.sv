@@ -34,8 +34,6 @@ module tb_mips_register_file;
   endfunction
 
   initial begin
-    int unsigned mismatch_count = 0;
-
     write_enable = 1'b0;
     write_addr   = '0;
     write_data   = '0;
@@ -63,19 +61,15 @@ module tb_mips_register_file;
       read_addr_b          = RegAddrWidth'(port_b_reg_index);
       #1;
       if (read_data_a !== expected_read_data_a) begin
-        mismatch_count++;
-        $error("port a, $%0d: got %h, expected %h", reg_index, read_data_a, expected_read_data_a);
+        $fatal(1, "FAIL tb_mips_register_file: port a, $%0d: got %h, expected %h", reg_index,
+               read_data_a, expected_read_data_a);
       end
       if (read_data_b !== expected_read_data_b) begin
-        mismatch_count++;
-        $error("port b, $%0d: got %h, expected %h", port_b_reg_index, read_data_b,
-               expected_read_data_b);
+        $fatal(1, "FAIL tb_mips_register_file: port b, $%0d: got %h, expected %h",
+               port_b_reg_index, read_data_b, expected_read_data_b);
       end
     end
 
-    if (mismatch_count != 0) begin
-      $fatal(1, "FAIL tb_mips_register_file: %0d mismatches", mismatch_count);
-    end
     $display("PASS tb_mips_register_file");
     $finish;
   end

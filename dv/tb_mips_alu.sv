@@ -33,8 +33,6 @@ module tb_mips_alu;
 
   initial begin
     alu_op_e alu_ops[5] = '{AluAdd, AluSub, AluAnd, AluOr, AluSlt};
-    int unsigned mismatch_count = 0;
-
     foreach (alu_ops[op_index]) begin
       for (int value_a = 0; value_a < OperandValueCount; value_a++) begin
         for (int value_b = 0; value_b < OperandValueCount; value_b++) begin
@@ -43,17 +41,14 @@ module tb_mips_alu;
           operand_b         = DataWidth'(value_b);
           #1;
           if (alu_result !== compute_expected_alu_result(alu_op_under_test, value_a, value_b)) begin
-            mismatch_count++;
-            $error("%s %0d, %0d: got %0d, expected %0d", alu_op_under_test.name(), value_a, value_b,
-                   alu_result, compute_expected_alu_result(alu_op_under_test, value_a, value_b));
+            $fatal(1, "FAIL tb_mips_alu: %s %0d, %0d: got %0d, expected %0d",
+                   alu_op_under_test.name(), value_a, value_b, alu_result,
+                   compute_expected_alu_result(alu_op_under_test, value_a, value_b));
           end
         end
       end
     end
 
-    if (mismatch_count != 0) begin
-      $fatal(1, "FAIL tb_mips_alu: %0d mismatches", mismatch_count);
-    end
     $display("PASS tb_mips_alu");
     $finish;
   end

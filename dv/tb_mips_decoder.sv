@@ -6,7 +6,6 @@ module tb_mips_decoder;
   logic        [31:0] instr;
   instr_kind_e        decoded_kind;
   alu_op_e            decoded_alu_op;
-  int unsigned        mismatch_count = 0;
 
   mips_decoder dut (
     .instr_i (instr),
@@ -19,14 +18,12 @@ module tb_mips_decoder;
     instr = {opcode, 20'hABCDE, funct};
     #1;
     if (decoded_kind !== expected_kind) begin
-      mismatch_count++;
-      $error("opcode %b funct %b: kind %s, expected %s", opcode, funct, decoded_kind.name(),
-             expected_kind.name());
+      $fatal(1, "FAIL tb_mips_decoder: opcode %b funct %b: kind %s, expected %s", opcode, funct,
+             decoded_kind.name(), expected_kind.name());
     end
     if (expected_kind == InstrAlu && decoded_alu_op !== expected_alu_op) begin
-      mismatch_count++;
-      $error("funct %b: alu_op %s, expected %s", funct, decoded_alu_op.name(),
-             expected_alu_op.name());
+      $fatal(1, "FAIL tb_mips_decoder: funct %b: alu_op %s, expected %s", funct,
+             decoded_alu_op.name(), expected_alu_op.name());
     end
   endtask
 
@@ -52,9 +49,6 @@ module tb_mips_decoder;
       end
     end
 
-    if (mismatch_count != 0) begin
-      $fatal(1, "FAIL tb_mips_decoder: %0d mismatches", mismatch_count);
-    end
     $display("PASS tb_mips_decoder");
     $finish;
   end
