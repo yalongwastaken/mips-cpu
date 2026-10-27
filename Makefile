@@ -4,10 +4,9 @@ VERIBLE_LINT   ?= verible-verilog-lint
 MIPS_AS        ?= mips-linux-gnu-as
 MIPS_LD        ?= mips-linux-gnu-ld
 MIPS_OBJCOPY   ?= mips-linux-gnu-objcopy
+# LibreLane installs the SkyWater 130 PDK version it pins here on first use
 PDK_ROOT       ?= $(HOME)/.ciel
 LIBRELANE_IMAGE ?= ghcr.io/librelane/librelane:3.0.16
-
-PDK_DIR := $(PDK_ROOT)/sky130A
 
 # Verilator needs the package before the modules that import it
 RTL := rtl/mips_pkg.sv $(filter-out rtl/mips_pkg.sv,$(wildcard rtl/*.sv))
@@ -18,6 +17,7 @@ PROGRAMS := $(filter-out dv/programs/crt0.s,$(wildcard dv/programs/*.s))
 
 BUILD := build
 SYN_RUN := pnr/runs/syn
+PNR_RUN := pnr/runs/pnr
 VERILATOR_FLAGS := --binary --timing --timescale 1ns/1ps --assert -Wall dv/verilator.vlt
 
 # LibreLane and its tools run from the image; the repository and the PDK are
@@ -25,7 +25,7 @@ VERILATOR_FLAGS := --binary --timing --timescale 1ns/1ps --assert -Wall dv/veril
 IN_LIBRELANE := docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR):$(CURDIR) \
                 -v $(PDK_ROOT):$(PDK_ROOT) -w $(CURDIR) $(LIBRELANE_IMAGE)
 
-.PHONY: test run lint format syn clean
+.PHONY: test run lint format syn pnr clean
 
 test: $(UNIT_TESTS:%=$(BUILD)/%/sim) $(BUILD)/tb_mips_top/sim $(PROGRAMS:dv/programs/%.s=$(BUILD)/programs/%.hex)
 	@failed=0; \
@@ -46,9 +46,14 @@ lint:
 format:
 	$(VERIBLE_FORMAT) --flagfile=lint/lowrisc-styleguide.verible_format --inplace $(RTL) $(TESTBENCHES)
 
-syn: $(PDK_DIR)
+syn: | $(PDK_ROOT)
 	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag syn --overwrite --to Checker.NetlistAssignStatements pnr/config.yaml
 	@grep -E 'cells$$|Chip area' $(SYN_RUN)/*-yosys-synthesis/reports/stat.rpt
+
+pnr: | $(PDK_ROOT)
+	$(IN_LIBRELANE) librelane --pdk-root $(PDK_ROOT) --run-tag pnr --overwrite pnr/config.yaml
+	$(IN_LIBRELANE) python3 pnr/report_signoff.py $(PNR_RUN)/final/metrics.json
+	$(IN_LIBRELANE) klayout -b -r pnr/render_layout.py -rd run=$(PNR_RUN) -rd png=$(PNR_RUN)/layout.png
 
 clean:
 	rm -rf $(BUILD) pnr/runs
@@ -72,5 +77,7 @@ $(BUILD)/programs/%.elf: $(BUILD)/programs/%.o $(BUILD)/programs/crt0.o dv/progr
 $(BUILD)/programs/%.hex: $(BUILD)/programs/%.elf
 	$(MIPS_OBJCOPY) -O verilog --verilog-data-width=4 $< $@
 
-$(PDK_DIR):
-	@echo "no SkyWater 130 PDK at PDK_ROOT=$(PDK_ROOT): install it with ciel (see README) or set PDK_ROOT" >&2; exit 1
+# Docker would create a missing mount point owned by root, and LibreLane could
+# not install the PDK into it
+$(PDK_ROOT):
+	mkdir -p $@

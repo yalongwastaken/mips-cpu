@@ -1,7 +1,7 @@
 # MIPS CPU
 
 An 8-bit multicycle MIPS processor and its memory in SystemVerilog, built from
-the SkyWater 130 nm standard cells and carried from RTL toward a GDS with
+the SkyWater 130 nm standard cells and carried from RTL to a signed-off GDS with
 open-source tools.
 
 > **Status: in progress.**
@@ -39,6 +39,15 @@ reporting the tests use. `dv/programs/link.ld` is the memory map.
 `pnr/config.yaml` and prints the cell count and area; the full reports are under
 `pnr/runs/syn/`.
 
+`make pnr` runs the whole flow to a GDS at the same clock target and fails
+unless the layout signs off clean at every timing corner: no DRC, LVS, XOR,
+antenna, slew, load, fanout, setup, or hold violations. It then prints those
+counts and the worst setup and hold slack, and renders the routing and power
+grid to `pnr/runs/pnr/layout.png`. CI runs it on every pull request and
+publishes the image from `main`:
+
+![The chip's signal routing under its power grid](https://yalongwastaken.github.io/mips-cpu/layout.png)
+
 ## Repository Structure
 
 ```
@@ -47,7 +56,8 @@ mips-cpu/
 ├── dv/               # unit testbenches and the whole-chip testbench
 │   └── programs/     # MIPS test programs, memory map, shared macros
 ├── lint/             # lowRISC lint rules and formatter settings
-├── pnr/              # the LibreLane flow configuration
+├── pnr/              # the LibreLane flow, its sign-off report, and the render
+├── .github/          # CI: lint, tests, layout, and the published image
 └── Makefile
 ```
 
@@ -60,13 +70,10 @@ mips-cpu/
 - verible v0.0-4296-g0f262651
 - GNU Make
 
-Synthesis also needs:
-
-- Docker, with LibreLane's image `ghcr.io/librelane/librelane:3.0.16`
-- The SkyWater 130 PDK at open_pdks `8afc8346`, installed with ciel 3.2.0:
-  `ciel enable --pdk-family sky130 8afc8346a57fe1ab7934ba5a6056ea8b43078e71`
-
-`PDK_ROOT` points at the PDK and defaults to `~/.ciel`.
+Synthesis and layout also need Docker, with LibreLane's image
+`ghcr.io/librelane/librelane:3.0.16`. The first `make syn` or `make pnr`
+downloads the SkyWater 130 PDK version LibreLane pins, a few gigabytes, into
+`PDK_ROOT`, which defaults to `~/.ciel`.
 
 ### Running
 
@@ -76,6 +83,7 @@ make run PROG=dv/programs/alu.s    # one program on the whole chip
 make lint                          # verible with lowRISC's rules, then Verilator
 make format                        # verible with lowRISC's settings
 make syn                           # LibreLane through synthesis
+make pnr                           # LibreLane through layout, sign-off, and the image
 ```
 
 ## Authors

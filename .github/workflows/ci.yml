@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-24.04
+    # Ubuntu 26.04 packages the Verilator and binutils versions the README names
+    container: ubuntu:26.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Verilator, binutils, and Make
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends \
+            binutils-mips-linux-gnu ca-certificates curl make verilator
+      - name: Install verible
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/chipsalliance/verible/releases/download/v0.0-4296-g0f262651/verible-v0.0-4296-g0f262651-linux-static-x86_64.tar.gz \
+            | tar --extract --gzip --strip-components=1 --directory=/usr/local
+      - run: make lint
+      - run: make test
+
+  layout:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # the runner's preinstalled SDKs leave too little disk for the LibreLane
+      # image, the PDK, and a layout run
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL
+      - run: make pnr
+      - name: Collect the layout image for GitHub Pages
+        if: github.event_name == 'push'
+        run: mkdir site && cp pnr/runs/pnr/layout.png site/
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name == 'push'
+        with:
+          path: site
+
+  publish-layout-image:
+    if: github.event_name == 'push'
+    needs: layout
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
