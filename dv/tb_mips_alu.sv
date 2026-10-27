@@ -3,8 +3,11 @@
 module tb_mips_alu;
   import mips_pkg::*;
 
+  localparam int OperandValueCount  = 2 ** DataWidth;
+  localparam int FirstNegativeValue = OperandValueCount / 2;
+
   alu_op_e alu_op_under_test;
-  logic [7:0] operand_a, operand_b, alu_result;
+  logic [DataWidth-1:0] operand_a, operand_b, alu_result;
 
   mips_alu dut (
     .op_i       (alu_op_under_test),
@@ -14,15 +17,16 @@ module tb_mips_alu;
   );
 
   // plain integer arithmetic, so the expected value shares nothing with the RTL's operators
-  function automatic logic [7:0] expected_result(alu_op_e alu_op, int value_a, int value_b);
-    int signed_a = (value_a >= 128) ? value_a - 256 : value_a;
-    int signed_b = (value_b >= 128) ? value_b - 256 : value_b;
+  function automatic logic [DataWidth-1:0] expected_result(alu_op_e alu_op, int value_a,
+                                                           int value_b);
+    int signed_a = (value_a >= FirstNegativeValue) ? value_a - OperandValueCount : value_a;
+    int signed_b = (value_b >= FirstNegativeValue) ? value_b - OperandValueCount : value_b;
     unique case (alu_op)
-      AluAdd:  return 8'((value_a + value_b) % 256);
-      AluSub:  return 8'((value_a - value_b + 256) % 256);
-      AluAnd:  return 8'(value_a & value_b);
-      AluOr:   return 8'(value_a | value_b);
-      AluSlt:  return (signed_a < signed_b) ? 8'd1 : 8'd0;
+      AluAdd:  return DataWidth'((value_a + value_b) % OperandValueCount);
+      AluSub:  return DataWidth'((value_a - value_b + OperandValueCount) % OperandValueCount);
+      AluAnd:  return DataWidth'(value_a & value_b);
+      AluOr:   return DataWidth'(value_a | value_b);
+      AluSlt:  return DataWidth'(signed_a < signed_b);
       default: return 'x;
     endcase
   endfunction
@@ -32,11 +36,11 @@ module tb_mips_alu;
     int unsigned mismatch_count = 0;
 
     foreach (alu_ops[op_index]) begin
-      for (int value_a = 0; value_a < 256; value_a++) begin
-        for (int value_b = 0; value_b < 256; value_b++) begin
+      for (int value_a = 0; value_a < OperandValueCount; value_a++) begin
+        for (int value_b = 0; value_b < OperandValueCount; value_b++) begin
           alu_op_under_test = alu_ops[op_index];
-          operand_a         = 8'(value_a);
-          operand_b         = 8'(value_b);
+          operand_a         = DataWidth'(value_a);
+          operand_b         = DataWidth'(value_b);
           #1;
           if (alu_result !== expected_result(alu_op_under_test, value_a, value_b)) begin
             mismatch_count++;

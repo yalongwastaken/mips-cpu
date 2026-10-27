@@ -2,11 +2,11 @@
 // storing to the I/O port: 1 means pass, any other value is a failure code.
 module tb_mips_top;
 
-  localparam logic [7:0] PassCode = 8'd1;
+  localparam logic [mips_pkg::DataWidth-1:0] PassCode = 1;
 
-  logic       clk = 1'b0;
-  logic       rst_n = 1'b0;
-  logic [7:0] io_port;
+  logic                           clk = 1'b0;
+  logic                           rst_n = 1'b0;
+  logic [mips_pkg::DataWidth-1:0] io_port;
 
   initial forever #5 clk = ~clk;
 

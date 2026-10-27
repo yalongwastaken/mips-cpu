@@ -2,6 +2,7 @@ package mips_pkg;
 
   parameter int unsigned DataWidth = 8;
   parameter int unsigned RegAddrWidth = 5;
+  parameter int unsigned RegCount = 2 ** RegAddrWidth;
   parameter int unsigned MemWordWidth = 32;
   parameter int unsigned MemBytesPerWord = MemWordWidth / DataWidth;
   parameter int unsigned MemByteOffsetWidth = $clog2(MemBytesPerWord);
