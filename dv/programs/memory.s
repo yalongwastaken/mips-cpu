@@ -37,9 +37,11 @@ _start:
         check_equal $5, $0, 7
         lb      $5, %lo(scratch_word + 2)($0)
         check_equal $5, $3, 8
+        lb      $5, %lo(scratch_word + 3)($0)
+        check_equal $5, $4, 9
 
         load_constant $6, 16
         lb      $5, %lo(scratch_word - 16)($6)
-        check_equal $5, $1, 9
+        check_equal $5, $1, 10
 
         pass
