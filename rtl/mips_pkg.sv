@@ -12,6 +12,9 @@ package mips_pkg;
   parameter int unsigned MemWordCount = 2 ** MemWordAddrWidth;
   parameter int unsigned PcWidth = MemWordAddrWidth + MemByteOffsetWidth;
 
+  // where the PC starts after reset, and so where a program image starts
+  parameter logic [PcWidth-1:0] ResetPc = '0;
+
   // the last byte address the data path reaches; a store there also drives the
   // chip's output port
   parameter logic [DataWidth-1:0] IoPortAddr = '1;

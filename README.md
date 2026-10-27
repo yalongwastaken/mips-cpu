@@ -33,7 +33,11 @@ Programs are MIPS assembly, built with GNU binutils. The core has no branch
 delay slots and no immediate arithmetic, so programs turn off the assembler's
 reordering and load constants from memory, and immediates use only their low 8
 bits. `dv/programs/common.inc` sets this up and provides the pass and fail
-reporting the tests use. `dv/programs/link.ld` is the memory map.
+reporting the tests use. `dv/programs/link.ld` is the memory map. The values
+programs share with the chip and its testbench, such as the I/O port address and
+the pass code, come from the SystemVerilog packages, and
+`dv/export_package_constants.sv` writes them out for the assembler and linker at
+build time.
 
 ## Results
 
@@ -55,7 +59,7 @@ publishes the image from `main`:
 ```
 mips-cpu/
 ├── rtl/              # the core, its memory, and the chip top
-├── dv/               # unit testbenches and the whole-chip testbench
+├── dv/               # testbenches, and the constants programs share with them
 │   └── programs/     # MIPS test programs, memory map, shared macros
 ├── lint/             # lowRISC lint rules and formatter settings
 ├── pnr/              # the LibreLane flow, its sign-off report, and the render

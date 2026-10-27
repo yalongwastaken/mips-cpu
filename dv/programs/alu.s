@@ -3,12 +3,13 @@
 
         .include "common.inc"
 
-        .equ    MINUS_ONE, 0xE0
-        .equ    MOST_NEGATIVE, 0xE1
-        .equ    MOST_POSITIVE, 0xE2
-
         .data
-        .byte   0xFF, 0x80, 0x7F
+minus_one:
+        .byte   0xFF
+most_negative:
+        .byte   0x80
+most_positive:
+        .byte   0x7F
 
         .text
         .globl  _start
@@ -39,14 +40,14 @@ _start:
         slt     $3, $2, $1
         check_equal $3, $9, 7
 
-        lb      $4, MINUS_ONE($0)
+        lb      $4, %lo(minus_one)($0)
         load_constant $5, 1
         slt     $3, $4, $5
         check_equal $3, $9, 8
 
         # -128 - 127 wraps to a positive difference, but -128 is still less
-        lb      $6, MOST_NEGATIVE($0)
-        lb      $7, MOST_POSITIVE($0)
+        lb      $6, %lo(most_negative)($0)
+        lb      $7, %lo(most_positive)($0)
         slt     $3, $6, $7
         check_equal $3, $9, 9
 

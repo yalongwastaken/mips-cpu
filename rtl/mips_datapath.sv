@@ -57,7 +57,7 @@ module mips_datapath (
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      pc_q <= '0;
+      pc_q <= ResetPc;
     end else if (ctrl_i.pc_write) begin
       pc_q <= pc_d;
     end

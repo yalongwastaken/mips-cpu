@@ -1,8 +1,7 @@
-// Runs one program image on the whole chip. A program reports its verdict by
-// storing to the I/O port: 1 means pass, any other value is a failure code.
+// Runs one program image on the whole chip, which reports its verdict on the I/O
+// port as mips_test_pkg describes.
 module tb_mips_top;
 
-  localparam logic [mips_pkg::DataWidth-1:0] PassCode = 1;
   // far longer than any test program runs, so reaching it means the program hung
   localparam int unsigned VerdictTimeoutCycles = 10000;
 
@@ -45,7 +44,7 @@ module tb_mips_top;
       @(posedge clk);
     end
 
-    if (io_port == PassCode) begin
+    if (io_port == mips_test_pkg::PassCode) begin
       $display("PASS %s", program_hex);
       $finish;
     end else if (io_port == '0) begin
