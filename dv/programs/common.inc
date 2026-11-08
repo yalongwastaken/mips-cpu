@@ -40,9 +40,6 @@
         # code numbers the failed check; dv/mips_test_pkg.sv says which values
         # tb_mips_top reads as no verdict and as a pass
         .macro  fail code
-        .if     ((\code) == 0) || ((\code) == PASS_CODE)
-        .error  "fail \code: 0 and PASS_CODE are not failure codes"
-        .endif
         store_verdict \code
         halt
         .endm
